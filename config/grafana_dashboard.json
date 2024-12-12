@@ -1,0 +1,128 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "Pipeline Monitoring Dashboard",
+    "timezone": "browser",
+    "panels": [
+      {
+        "type": "row",
+        "title": "GPU Metrics",
+        "gridPos": { "x": 0, "y": 0, "w": 24, "h": 1 }
+      },
+      {
+        "type": "graph",
+        "title": "GPU Utilization (%)",
+        "targets": [
+          {
+            "expr": "gpu_utilization",
+            "legendFormat": "{{gpu}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 1, "w": 12, "h": 8 }
+      },
+      {
+        "type": "graph",
+        "title": "GPU Temperature (°C)",
+        "targets": [
+          {
+            "expr": "gpu_temperature",
+            "legendFormat": "{{gpu}}",
+            "refId": "B"
+          }
+        ],
+        "gridPos": { "x": 12, "y": 1, "w": 12, "h": 8 }
+      },
+      {
+        "type": "row",
+        "title": "Arbitrage Metrics",
+        "gridPos": { "x": 0, "y": 9, "w": 24, "h": 1 }
+      },
+      {
+        "type": "graph",
+        "title": "Successful Arbitrage Transactions",
+        "targets": [
+          {
+            "expr": "arbitrage_successful_transactions",
+            "legendFormat": "{{instance}}",
+            "refId": "C"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 10, "w": 12, "h": 8 }
+      },
+      {
+        "type": "graph",
+        "title": "Arbitrage Profit (USDT)",
+        "targets": [
+          {
+            "expr": "arbitrage_profit",
+            "legendFormat": "{{instance}}",
+            "refId": "D"
+          }
+        ],
+        "gridPos": { "x": 12, "y": 10, "w": 12, "h": 8 }
+      },
+      {
+        "type": "row",
+        "title": "Digital Ocean Metrics",
+        "gridPos": { "x": 0, "y": 18, "w": 24, "h": 1 }
+      },
+      {
+        "type": "graph",
+        "title": "CPU Usage (%)",
+        "targets": [
+          {
+            "expr": "digitalocean_cpu_usage",
+            "legendFormat": "{{instance}}",
+            "refId": "E"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 19, "w": 12, "h": 8 }
+      },
+      {
+        "type": "graph",
+        "title": "Memory Usage (%)",
+        "targets": [
+          {
+            "expr": "digitalocean_memory_usage",
+            "legendFormat": "{{instance}}",
+            "refId": "F"
+          }
+        ],
+        "gridPos": { "x": 12, "y": 19, "w": 12, "h": 8 }
+      },
+      {
+        "type": "row",
+        "title": "Tax Metrics",
+        "gridPos": { "x": 0, "y": 27, "w": 24, "h": 1 }
+      },
+      {
+        "type": "stat",
+        "title": "Total Tax Due (EUR)",
+        "targets": [
+          {
+            "expr": "tax_due",
+            "legendFormat": "Total Tax",
+            "refId": "G"
+          }
+        ],
+        "gridPos": { "x": 0, "y": 28, "w": 12, "h": 6 }
+      },
+      {
+        "type": "stat",
+        "title": "Annual Gain (EUR)",
+        "targets": [
+          {
+            "expr": "annual_gain",
+            "legendFormat": "Annual Gain",
+            "refId": "H"
+          }
+        ],
+        "gridPos": { "x": 12, "y": 28, "w": 12, "h": 6 }
+      }
+    ],
+    "schemaVersion": 36,
+    "version": 1,
+    "refresh": "10s"
+  }
+}

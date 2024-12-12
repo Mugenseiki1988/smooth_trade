@@ -1,0 +1,41 @@
+{
+  "arbitrage_metrics": {
+    "active_loops": 50,
+    "inactive_loops": 5,
+    "successful_trades": 1000,
+    "failed_trades": 10,
+    "total_profit_usd": 5000.75,
+    "average_loop_latency_seconds": 0.35,
+    "highest_profit_loop": {
+      "loop_id": "BTC/USDT -> ETH/BTC -> ETH/USDT",
+      "profit_usd": 150.25
+    },
+    "last_update": "2024-11-17T10:00:00Z"
+  },
+  "gpu_metrics": {
+    "gpu_utilization_percent": 75.3,
+    "memory_used_mb": 4000,
+    "temperature_celsius": 65,
+    "power_draw_watts": 120,
+    "last_update": "2024-11-17T10:00:00Z"
+  },
+  "digital_ocean_metrics": {
+    "cpu_usage_percent": 65.4,
+    "memory_usage_mb": 2048,
+    "network_in_kbps": 512,
+    "network_out_kbps": 256,
+    "last_update": "2024-11-17T10:00:00Z"
+  },
+  "tax_metrics": {
+    "flat_tax_rate_percent": 30.0,
+    "total_annual_profit_usd": 10000,
+    "tax_due_usd": 3000,
+    "last_update": "2024-11-17T10:00:00Z"
+  },
+  "monitoring_info": {
+    "last_update_time": "2024-11-17T10:00:00Z",
+    "prometheus_status": "active",
+    "prometheus_endpoint": "http://localhost:9090",
+    "update_interval_seconds": 60
+  }
+}

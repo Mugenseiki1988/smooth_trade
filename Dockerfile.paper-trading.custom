@@ -1,0 +1,63 @@
+# Utiliser une image de base légère et adaptée
+FROM python:3.10-slim
+
+# Maintainer information
+LABEL maintainer="votre_email@example.com"
+
+# Configuration des variables d'environnement
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    AIRFLOW_HOME=/app/airflow
+
+# Mise à jour et installation des dépendances système
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    wget \
+    git \
+    nano \
+    libpq-dev \
+    libssl-dev \
+    libffi-dev \
+    apache2-utils \
+    && apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# Installation de Docker et Airflow CLI
+RUN curl -fsSL https://get.docker.com -o get-docker.sh && sh get-docker.sh && \
+    pip install --no-cache-dir apache-airflow==2.6.3
+
+# Configuration de l’utilisateur Airflow
+RUN useradd -ms /bin/bash airflow
+USER airflow
+
+# Définir le répertoire de travail
+WORKDIR /app/smooth_trade
+
+# Copie des fichiers locaux dans le conteneur
+COPY . /app/smooth_trade
+
+# Installation des dépendances Python
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Initialisation d'Airflow et création d'un utilisateur administrateur
+RUN airflow db init && \
+    airflow users create \
+        --username admin \
+        --firstname Admin \
+        --lastname User \
+        --role Admin \
+        --email admin@example.com
+
+# Création des répertoires nécessaires pour les logs et données
+RUN mkdir -p /app/data/logs /app/data/config /app/data/trades /app/data/exports
+
+# Configuration des permissions pour l'utilisateur airflow
+RUN chown -R airflow:airflow /app
+
+# Exposition des ports nécessaires
+EXPOSE 8080 9090 3000
+
+# Commande par défaut pour lancer les services Airflow
+CMD ["sh", "-c", "airflow webserver & airflow scheduler"]

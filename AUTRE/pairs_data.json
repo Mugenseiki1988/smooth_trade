@@ -1,0 +1,24 @@
+{
+  "websockets": {
+    "ws1": {
+      "pairs": [
+        { "symbol": "BTCUSDT", "status": "active" },
+        { "symbol": "ETHUSDT", "status": "active" },
+        { "symbol": "BNBUSDT", "status": "active" }
+      ],
+      "updated_at": "2024-11-17T10:00:00Z"
+    },
+    "ws2": {
+      "pairs": [
+        { "symbol": "SOLUSDT", "status": "active" },
+        { "symbol": "XRPUSDT", "status": "active" },
+        { "symbol": "ADAUSDT", "status": "active" }
+      ],
+      "updated_at": "2024-11-17T10:00:00Z"
+    }
+  },
+  "metadata": {
+    "total_pairs": 6,
+    "last_update": "2024-11-17T10:00:00Z"
+  }
+}

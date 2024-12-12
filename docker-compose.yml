@@ -1,0 +1,35 @@
+version: '3.8'
+services:
+  airflow:
+    build:
+      context: .
+      dockerfile: Dockerfile.paper-trading.custom
+    container_name: airflow
+    ports:
+      - "8080:8080"
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__DAGS_FOLDER=/app/dags
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+    volumes:
+      - ./dags:/app/dags
+      - ./config:/app/config
+      - ./data:/app/data
+
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./config/grafana_dashboard.json:/var/lib/grafana/provisioning/dashboards/grafana_dashboard.json
+    ports:
+      - "3000:3000"

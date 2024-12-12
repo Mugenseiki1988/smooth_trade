@@ -1,0 +1,41 @@
+{
+  "transactions": [
+    {
+      "transaction_id": "txn_001",
+      "timestamp": "2024-11-17T10:00:00Z",
+      "loop": {
+        "start": "USDT",
+        "path": ["BTC", "ETH"],
+        "end": "USDT"
+      },
+      "amount_start": 1000.00,
+      "amount_end": 1015.00,
+      "profit": 15.00,
+      "status": "success",
+      "execution_time_seconds": 0.45
+    },
+    {
+      "transaction_id": "txn_002",
+      "timestamp": "2024-11-17T10:01:00Z",
+      "loop": {
+        "start": "USDT",
+        "path": ["ETH", "BTC"],
+        "end": "USDT"
+      },
+      "amount_start": 500.00,
+      "amount_end": 498.00,
+      "profit": -2.00,
+      "status": "failed",
+      "error_message": "Insufficient liquidity",
+      "execution_time_seconds": 0.35
+    }
+  ],
+  "summary": {
+    "total_transactions": 2,
+    "successful_transactions": 1,
+    "failed_transactions": 1,
+    "total_profit": 13.00,
+    "average_execution_time_seconds": 0.40,
+    "last_update": "2024-11-17T10:02:00Z"
+  }
+}

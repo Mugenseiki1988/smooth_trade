@@ -1,0 +1,66 @@
+# Paramètres généraux de l'application
+general:
+  stablecoin: "USDT"             # Stablecoin utilisé comme référence
+  display_precision: 8           # Précision d'affichage des nombres
+
+# Configuration des API Binance
+binance:
+  api_keys:                      # Liste des clés API Binance (29 pour le trading, 1 pour le rapport fiscal)
+    trading_keys:                # Clés API dédiées au trading
+      - api_key_1: "YOUR_API_KEY_1"
+        secret_key_1: "YOUR_SECRET_KEY_1"
+      - api_key_2: "YOUR_API_KEY_2"
+        secret_key_2: "YOUR_SECRET_KEY_2"
+      # Continuez jusqu'à 29 clés
+    tax_key:                     # Clé API dédiée au rapport fiscal
+      api_key: "YOUR_API_KEY_TAX"
+      secret_key: "YOUR_SECRET_KEY_TAX"
+  base_url: "https://api.binance.com"  # URL de base de l'API Binance
+
+# Configuration des WebSockets
+websockets:
+  count: 20                      # Nombre total de WebSockets
+  max_pairs_per_websocket: 50    # Nombre maximum de paires par WebSocket
+  endpoints:                     # Endpoints WebSocket de Binance
+    - ws1_url: "wss://stream.binance.com:9443/ws/stream1"
+    - ws2_url: "wss://stream.binance.com:9443/ws/stream2"
+    - ws3_url: "wss://stream.binance.com:9443/ws/stream3"
+    # Continuez à ajouter jusqu'à ws20_url
+    - ws20_url: "wss://stream.binance.com:9443/ws/stream20"
+
+# Critères de validation des paires
+pair_validation_criteria:
+  min_volume: 100000             # Volume minimum en 24h (en stablecoin)
+  min_days_active: 7             # Nombre minimum de jours depuis l'activation
+
+# Paramètres de répartition dynamique
+dynamic_distribution:
+  prometheus_url: "http://localhost:9090"  # Endpoint de Prometheus
+  scrape_interval: 10s                     # Intervalle de collecte des données
+
+# Paramètres pour l'identification des boucles d'arbitrage
+arbitrage:
+  min_profit: 0.001             # Profit minimum (en stablecoin) pour considérer une boucle rentable
+  max_loop_duration: 300        # Durée maximale en secondes pour une boucle d'arbitrage
+
+# Paramètres pour le monitoring via Prometheus et Grafana
+monitoring:
+  prometheus_scrape_interval: 10s        # Intervalle de scraping pour Prometheus
+  grafana_dashboard_url: "http://localhost:3000"  # URL du tableau de bord Grafana
+  grafana_dashboard_template: "grafana_dashboard.json"  # Modèle JSON de Grafana
+
+# Paramètres pour le rapport fiscal
+tax_report:
+  fiscal_year: 2024               # Année fiscale
+  tax_report_path: "../data/tax_report.json"  # Fichier de rapport fiscal
+  tax_metrics_path: "../data/tax_metrics.json"  # Fichier des métriques fiscales
+
+# Paramètres pour la gestion des erreurs
+error_logging:
+  log_level: "ERROR"                     # Niveau de journalisation des erreurs
+  error_file: "../data/error_logs.json"  # Fichier de stockage des erreurs
+
+# Paramètres pour la base de données
+database:
+  path: "../data/tradeV3.sqlite"         # Chemin de la base de données SQLite
+  logs_path: "../data/logs/trading.log"  # Fichier de log pour les transactions

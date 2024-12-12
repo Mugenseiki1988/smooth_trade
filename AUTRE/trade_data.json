@@ -1,0 +1,26 @@
+{
+  "active_trades": [
+    {
+      "trade_id": "1",
+      "pair": "BTCUSDT",
+      "order_type": "BUY",
+      "price": 16700.50,
+      "quantity": 0.1,
+      "status": "open",
+      "timestamp": "2024-11-17T12:00:00Z"
+    },
+    {
+      "trade_id": "2",
+      "pair": "ETHBTC",
+      "order_type": "SELL",
+      "price": 0.0765,
+      "quantity": 1.5,
+      "status": "executed",
+      "timestamp": "2024-11-17T12:05:00Z"
+    }
+  ],
+  "trade_metadata": {
+    "total_active_trades": 1,
+    "last_update": "2024-11-17T12:10:00Z"
+  }
+}

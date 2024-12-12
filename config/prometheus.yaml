@@ -1,0 +1,59 @@
+global:
+  scrape_interval: 10s  # Intervalle global de collecte des métriques
+  evaluation_interval: 10s  # Intervalle d'évaluation des règles
+
+scrape_configs:
+  # Endpoint pour les métriques GPU
+  - job_name: "gpu_metrics"
+    static_configs:
+      - targets:
+          - "localhost:9100"  # Port pour le GPU monitor
+
+  # Endpoint pour les métriques d'arbitrage
+  - job_name: "arbitrage_metrics"
+    static_configs:
+      - targets:
+          - "localhost:9200"  # Port pour arbitrage_instance_metrics.py
+
+  # Endpoint pour les boucles inactives
+  - job_name: "inactive_loops_metrics"
+    static_configs:
+      - targets:
+          - "localhost:9201"  # Port pour les métriques des boucles inactives
+
+  # Endpoint pour les métriques Digital Ocean
+  - job_name: "digital_ocean_metrics"
+    static_configs:
+      - targets:
+          - "localhost:9300"  # Port pour digital_ocean_monitor.py
+
+  # Endpoint pour les métriques fiscales
+  - job_name: "tax_metrics"
+    static_configs:
+      - targets:
+          - "localhost:9400"  # Port pour tax_report_generation.py
+
+  # Endpoint pour les métriques consolidées
+  - job_name: "consolidated_metrics"
+    static_configs:
+      - targets:
+          - "localhost:9500"  # Port pour metrics_report.py
+
+  # Endpoint pour les métriques des performances avancées
+  - job_name: "performance_metrics"
+    static_configs:
+      - targets:
+          - "localhost:9600"  # Port pour performance_metrics.py
+
+  # Endpoint pour Prometheus lui-même
+  - job_name: "prometheus"
+    static_configs:
+      - targets:
+          - "localhost:9090"  # Port par défaut de Prometheus
+
+  # Endpoint pour Grafana (si nécessaire pour exporter des métriques personnalisées)
+  - job_name: "grafana"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets:
+          - "localhost:3000"  # Port par défaut de Grafana

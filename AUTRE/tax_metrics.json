@@ -1,0 +1,22 @@
+{
+  "year": 2024,
+  "metrics": {
+    "total_profit": 2300.00,
+    "flat_tax_rate": 0.30,
+    "flat_tax_due": 690.00,
+    "transaction_count": 2,
+    "highest_profit_transaction": {
+      "transaction_id": "T123456",
+      "profit": 2000.00
+    },
+    "lowest_profit_transaction": {
+      "transaction_id": "T123457",
+      "profit": 300.00
+    }
+  },
+  "monitoring": {
+    "pushed_to_prometheus": true,
+    "prometheus_endpoint": "http://localhost:9090",
+    "last_push_timestamp": "2024-11-17T12:30:00Z"
+  }
+}
