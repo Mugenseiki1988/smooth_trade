@@ -107,7 +107,7 @@ def reset_postgres_data():
         subprocess.run(["rm", "-rf", postgres_data_path], check=True)
 
     # Réinitialiser les migrations de base de données
-    run_command(["docker-compose", "up", "airflow-init"], cwd=airflow_home)
+    run_command(["docker-compose", "run", "airflow-webserver", "airflow", "db", "init"], cwd=airflow_home)
     run_command(["docker-compose", "up", "-d"], cwd=airflow_home)
 
 
@@ -161,3 +161,4 @@ def diagnose_and_fix():
 
 if __name__ == "__main__":
     diagnose_and_fix()
+
