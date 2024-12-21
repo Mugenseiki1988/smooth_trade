@@ -30,8 +30,11 @@ def configure_sql_server_connection():
         IF NOT EXISTS (SELECT name FROM sys.sql_logins WHERE name = '{user_name}')
         BEGIN
             CREATE LOGIN {user_name} WITH PASSWORD = '{user_password}';
+        END;
+        IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = '{user_name}')
+        BEGIN
             CREATE USER {user_name} FOR LOGIN {user_name};
-        END
+        END;
         """)
         print(f"Utilisateur SQL '{user_name}' vérifié ou créé.")
 
@@ -83,7 +86,6 @@ def test_sql_server_connection(server, database, username, password):
 def launch_ssms(server, username, password):
     try:
         print("Tentative de lancement de SQL Server Management Studio...")
-        # Chemin vers SSMS
         ssms_path = r"C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Ssms.exe"
 
         # Vérifier si le chemin SSMS existe
