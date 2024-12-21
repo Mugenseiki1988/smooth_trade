@@ -1,4 +1,6 @@
 import pyodbc
+import os
+import subprocess
 
 def configure_sql_server_connection():
     # Chaîne de connexion pour configurer la base avec le compte administrateur SQL Server
@@ -26,16 +28,13 @@ def configure_sql_server_connection():
         cursor.execute(f"IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '{database_name}') CREATE DATABASE {database_name};")
         print(f"Base de données '{database_name}' vérifiée ou créée.")
 
-        # Sélectionner la base de données
-        cursor.execute(f"USE {database_name};")
-
-        # Créer un utilisateur SQL si nécessaire
+        # Donner les autorisations nécessaires pour le compte utilisateur
         cursor.execute(f"""
         IF NOT EXISTS (SELECT name FROM sys.sql_logins WHERE name = '{user_name}')
         BEGIN
             CREATE LOGIN {user_name} WITH PASSWORD = '{user_password}';
             CREATE USER {user_name} FOR LOGIN {user_name};
-            EXEC sp_addrolemember 'db_owner', '{user_name}';
+            ALTER ROLE db_owner ADD MEMBER {user_name};
         END
         """)
         print(f"Utilisateur SQL '{user_name}' vérifié ou créé avec succès.")
@@ -74,6 +73,21 @@ def test_sql_server_connection(server, database, username, password):
     except pyodbc.Error as e:
         print(f"Erreur lors de la connexion : {e}")
 
+def launch_ssms(server, username, password):
+    try:
+        print("Tentative de lancement de SQL Server Management Studio...")
+        # Chemin mis à jour pour SSMS 20
+        ssms_path = r'"C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Ssms.exe"'
+        
+        # Construire la commande pour SSMS
+        command = f'{ssms_path} -S {server} -U {username} -P {password}'
+        
+        # Lancer SSMS avec subprocess
+        subprocess.Popen(command, shell=True)
+        print("SQL Server Management Studio lancé avec succès.")
+    except Exception as e:
+        print(f"Erreur lors du lancement de SSMS : {e}")
+
 # Étape 1 : Configurer SQL Server
 configure_sql_server_connection()
 
@@ -84,3 +98,9 @@ test_sql_server_connection(
     username="airflow_user",
     password="AirflowUserPassword#123"
 )
+
+# Étape 3 : Lancer SQL Server Management Studio
+launch_ssms(
+    server="localhost",
+    username="sa",
+    password="Mugenseiki1988#"
