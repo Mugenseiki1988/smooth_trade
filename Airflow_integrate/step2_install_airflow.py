@@ -31,7 +31,15 @@ def install_airflow():
         print("Le fichier docker-compose.yaml existe déjà.")
     
     # Configurer les répertoires et le fichier .env
-    subprocess.run(["mkdir", "-p", "dags", "logs", "plugins"], cwd=airflow_home, check=True)
+    dags_path = os.path.join(airflow_home, "dags")
+    logs_path = os.path.join(airflow_home, "logs")
+    plugins_path = os.path.join(airflow_home, "plugins")
+    
+    for path in [dags_path, logs_path, plugins_path]:
+        if not os.path.exists(path):
+            os.makedirs(path)
+            print(f"Répertoire créé : {path}")
+    
     env_path = os.path.join(airflow_home, ".env")
     with open(env_path, "w") as env_file:
         env_file.write("AIRFLOW_UID=50000\n")
