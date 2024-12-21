@@ -16,6 +16,7 @@ import pyodbc
 # - Volumes : Un volume nommé `mssql-data` est utilisé pour stocker de manière persistante les données SQL Server,
 #   même si le conteneur est redémarré ou recréé.
 
+
 # Configuration du fichier docker-compose.yaml
 DOCKER_COMPOSE_YAML_CONTENT = """
 version: '3.7'
@@ -159,7 +160,7 @@ def test_sql_server_connection():
 
 # Fonction principale
 def diagnose_and_fix():
-    airflow_home = os.getcwd()
+    airflow_home = "D:/Airflow_tutorial"
     docker_compose_path = os.path.join(airflow_home, "docker-compose.yaml")
 
     print("=== Étape 25 : Diagnostic et correction des erreurs d'Airflow ===")
