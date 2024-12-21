@@ -24,11 +24,11 @@ services:
     image: mcr.microsoft.com/mssql/server:2019-latest
     environment:
       ACCEPT_EULA: "Y"
-      SA_PASSWORD: "StrongP@ssw0rd"
+      SA_PASSWORD: "Mugenseiki1988#"
     ports:
       - "1433:1433"
     healthcheck:
-      test: ["CMD-SHELL", "sqlcmd -S localhost -U SA -P StrongP@ssw0rd -Q 'SELECT 1'"]
+      test: ["CMD-SHELL", "sqlcmd -S localhost -U SA -P Mugenseiki1988# -Q 'SELECT 1'"]
       interval: 10s
       retries: 3
     volumes:
