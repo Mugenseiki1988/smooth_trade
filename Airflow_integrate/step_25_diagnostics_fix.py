@@ -1,7 +1,16 @@
 import subprocess
 import os
 
+# Description des conteneurs Docker utilisés dans ce projet :
+# - postgres : Conteneur pour la base de données PostgreSQL utilisée par Airflow.
+# - redis : Conteneur pour Redis, utilisé comme broker par Airflow pour la gestion des tâches.
+# - airflow-webserver : Conteneur pour le serveur web Airflow (interface utilisateur accessible via http://localhost:8080).
+# - airflow-scheduler : Conteneur pour le scheduler Airflow, responsable de l'exécution des DAGs programmés.
+# - airflow-triggerer (si présent) : Composant gérant les événements dans les DAGs, utilisé dans certaines configurations.
+# - airflow-worker (si présent) : Optionnel, pour exécuter les tâches dans une configuration CeleryExecutor.
+
 DOCKER_COMPOSE_YAML_CONTENT = """
+version: '3.7'
 services:
   postgres:
     image: postgres:13
@@ -10,7 +19,7 @@ services:
       POSTGRES_PASSWORD: airflow
       POSTGRES_DB: airflow
     volumes:
-      - postgres-db-volume:/var/lib/postgresql/data
+      - ./postgres-data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD", "pg_isready", "-U", "airflow"]
       interval: 10s
@@ -48,7 +57,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
-      - D:/Airflow_tutorial/config/airflow.cfg:/opt/airflow/airflow.cfg
+      - ./config/airflow.cfg:/opt/airflow/airflow.cfg
 
   airflow-scheduler:
     image: apache/airflow:2.10.4
@@ -100,72 +109,41 @@ def run_command(command, cwd=None):
     except subprocess.CalledProcessError as e:
         print(f"Erreur : {e.stderr}")
 
-def check_docker_containers():
-    print("=== Vérification des conteneurs Docker ===")
-    run_command(["docker", "ps"])
-
-def check_logs(container_name):
-    print(f"=== Vérification des logs du conteneur {container_name} ===")
-    run_command(["docker", "logs", container_name])
-
-def check_airflow_cfg_in_container():
-    print("=== Vérification de la présence du fichier airflow.cfg dans le conteneur airflow-webserver ===")
+# Détection et suppression des conteneurs inutiles
+def remove_unused_containers():
+    print("=== Suppression des conteneurs inutiles ===")
     try:
-        result = subprocess.run(
-            ["docker", "exec", "airflow_tutorial-airflow-webserver-1", "ls", "/opt/airflow/airflow.cfg"],
-            check=True, text=True, capture_output=True
-        )
-        print("Fichier airflow.cfg trouvé dans le conteneur.")
-    except subprocess.CalledProcessError:
-        print("Fichier airflow.cfg introuvable dans le conteneur airflow-webserver.")
-        print("Redémarrage des services avec le bon montage des volumes...")
-        restart_services()
-
-def restart_services():
-    print("=== Redémarrage des services ===")
-    airflow_home = "D:/Airflow_tutorial"
-    run_command(["docker-compose", "down"], cwd=airflow_home)
-    run_command(["docker-compose", "up", "-d"], cwd=airflow_home)
-
-def reset_postgres_data():
-    print("=== Réinitialisation des données PostgreSQL ===")
-    airflow_home = "D:/Airflow_tutorial"
-    postgres_data_path = os.path.join(airflow_home, "postgres-data")
-
-    # Arrêter les conteneurs Docker
-    run_command(["docker-compose", "down"], cwd=airflow_home)
-
-    # Supprimer les données PostgreSQL si elles existent
-    if os.path.exists(postgres_data_path):
-        print(f"Suppression du répertoire PostgreSQL : {postgres_data_path}")
-        subprocess.run(["rm", "-rf", postgres_data_path], check=True)
-
-    # Réinitialiser les migrations de base de données
-    run_command(["docker-compose", "run", "airflow-webserver", "airflow", "db", "init"], cwd=airflow_home)
-    run_command(["docker-compose", "up", "-d"], cwd=airflow_home)
-
-def reset_airflow_database():
-    print("=== Réinitialisation et mise à jour de la base de données Airflow ===")
-    run_command(["docker-compose", "exec", "airflow-webserver", "airflow", "db", "reset", "--yes"])
-    run_command(["docker-compose", "exec", "airflow-webserver", "airflow", "db", "upgrade"])
-
-def test_localhost_connection():
-    print("=== Test de connexion à l'interface Web Airflow ===")
-    try:
-        result = subprocess.run(["curl", "http://localhost:8080"], check=True, text=True, capture_output=True)
-        print("Connexion réussie :")
-        print(result.stdout)
+        result = subprocess.run(["docker", "ps", "-a", "--filter", "name=airflow", "--format", "{{.ID}}"],
+                                check=True, text=True, capture_output=True)
+        container_ids = result.stdout.strip().split("\n")
+        for container_id in container_ids:
+            print(f"Suppression du conteneur : {container_id}")
+            subprocess.run(["docker", "rm", "-f", container_id], check=True)
     except subprocess.CalledProcessError as e:
-        print("La connexion à l'interface Web Airflow a échoué :")
-        print(e.stderr)
+        print(f"Erreur lors de la suppression des conteneurs inutiles : {e.stderr}")
+
+# Analyse des logs avec OpenAI
+# (hypothèse : les logs sont collectés dans un fichier ou via une commande)
+def analyze_logs_with_openai(log_file):
+    try:
+        import openai
+        print("=== Analyse des logs avec OpenAI ===")
+        with open(log_file, 'r') as file:
+            logs = file.read()
+        response = openai.Completion.create(
+            engine="text-davinci-003",
+            prompt=f"Analyse ces logs et identifie les erreurs et solutions potentielles :\n{logs}",
+            max_tokens=500
+        )
+        print(response["choices"][0]["text"].strip())
+    except ImportError:
+        print("Le module OpenAI n'est pas installé. Installez-le avec 'pip install openai'.")
+    except Exception as e:
+        print(f"Erreur lors de l'analyse des logs : {e}")
 
 def diagnose_and_fix():
-    airflow_home = "D:/Airflow_tutorial"
+    airflow_home = os.getcwd()
     docker_compose_path = os.path.join(airflow_home, "docker-compose.yaml")
-
-    if not os.path.exists(airflow_home):
-        print(f"Le répertoire {airflow_home} n'existe pas. Assurez-vous que le chemin est correct.")
-        return
 
     print("=== Étape 25 : Diagnostic et correction des erreurs d'Airflow ===")
 
@@ -175,26 +153,17 @@ def diagnose_and_fix():
     # Créer le fichier airflow.cfg
     create_airflow_cfg(airflow_home)
 
-    # Vérification des conteneurs
-    check_docker_containers()
+    # Suppression des conteneurs inutiles
+    remove_unused_containers()
 
-    # Vérification des logs des principaux conteneurs
-    check_logs("airflow_tutorial-airflow-webserver-1")
-    check_logs("airflow_tutorial-airflow-scheduler-1")
-    check_logs("airflow_tutorial-postgres-1")
-    check_logs("airflow_tutorial-redis-1")
+    # Vérification des conteneurs Docker
+    run_command(["docker-compose", "up", "-d"], cwd=airflow_home)
+    run_command(["docker", "ps"])
 
-    # Vérification de airflow.cfg dans le conteneur
-    check_airflow_cfg_in_container()
-
-    # Réinitialisation des données PostgreSQL
-    reset_postgres_data()
-
-    # Réinitialisation de la base de données Airflow
-    reset_airflow_database()
-
-    # Test de la connexion à l'interface Web
-    test_localhost_connection()
+    # Vérification des logs et analyse avec OpenAI
+    logs_path = os.path.join(airflow_home, "airflow_logs.txt")
+    run_command(["docker", "logs", "airflow_tutorial-airflow-webserver-1", "&>", logs_path])
+    analyze_logs_with_openai(logs_path)
 
 if __name__ == "__main__":
     diagnose_and_fix()
