@@ -28,9 +28,15 @@ def check_container_health(container_name):
         print(e.stderr)
         return None
 
+def stop_container(container_name):
+    print(f"[INFO] Stopping container: {container_name}")
+    run_command(["docker", "stop", container_name], f"Stopping container {container_name}")
+
 def restart_container(container_name):
     print(f"[INFO] Restarting container: {container_name}")
-    run_command(["docker", "restart", container_name], f"Restarting container {container_name}")
+    stop_container(container_name)
+    time.sleep(2)  # Wait briefly to ensure the container is stopped
+    run_command(["docker", "start", container_name], f"Restarting container {container_name}")
 
 def check_logs_for_errors(container_name, error_keywords):
     print(f"[INFO] Checking logs for container: {container_name}")
@@ -83,6 +89,15 @@ def configure_sql_server_connection():
     except pyodbc.Error as e:
         print(f"[ERROR] SQL Server configuration failed: {e}")
 
+def diagnose_container(container_name):
+    print(f"[INFO] Diagnosing container: {container_name}")
+    
+    # Check disk usage
+    run_command(["docker", "system", "df"], "Checking Docker disk usage")
+    
+    # Inspect container for detailed information
+    run_command(["docker", "inspect", container_name], f"Inspecting container {container_name}")
+
 def fix_mssql_container():
     container_name = "airflow_tutorial-mssql-1"
 
@@ -108,7 +123,7 @@ def fix_mssql_container():
         print(f"[WARNING] Container {container_name} is unhealthy. Attempting to diagnose...")
 
     # Step 3: Check logs for common errors
-    error_keywords = ["Failed to load LSA", "Permission denied", "fatal error", "AppLoader"]
+    error_keywords = ["Failed to load LSA", "Permission denied", "fatal error", "AppLoader", "dump"]
     has_errors = check_logs_for_errors(container_name, error_keywords)
 
     if has_errors:
@@ -130,12 +145,19 @@ def fix_mssql_container():
     print("[INFO] Attempting SQL Server configuration...")
     configure_sql_server_connection()
 
+    # Step 7: Perform extended diagnostics
+    diagnose_container(container_name)
+
     # Final health check
     health_status = check_container_health(container_name)
     if health_status == "healthy":
         print(f"[SUCCESS] Container {container_name} is now healthy.")
     else:
         print(f"[ERROR] Container {container_name} is still unhealthy. Further manual intervention is required.")
+        print("[SUGGESTION] Consider the following:")
+        print("1. Verify that the MSSQL image version is compatible with your host OS.")
+        print("2. Increase Docker resources (RAM, CPU) if necessary.")
+        print("3. Ensure the required permissions and security contexts are properly set.")
 
 if __name__ == "__main__":
     fix_mssql_container()
