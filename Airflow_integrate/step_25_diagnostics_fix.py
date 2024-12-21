@@ -95,7 +95,7 @@ def check_logs(container_name):
 
 def reset_postgres_data():
     print("=== Réinitialisation des données PostgreSQL ===")
-    airflow_home = "./airflow_tutorial"
+    airflow_home = "D:/Airflow_tutorial"
     postgres_data_path = os.path.join(airflow_home, "postgres-data")
 
     # Arrêter les conteneurs Docker
