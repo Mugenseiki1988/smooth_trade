@@ -1,30 +1,38 @@
-import subprocess
 import os
+import subprocess
+from datetime import datetime, timedelta
+import pyodbc
 
 # Description des conteneurs Docker utilisés dans ce projet :
-# - postgres : Conteneur pour la base de données PostgreSQL utilisée par Airflow.
-# - redis : Conteneur pour Redis, utilisé comme broker par Airflow pour la gestion des tâches.
-# - airflow-webserver : Conteneur pour le serveur web Airflow (interface utilisateur accessible via http://localhost:8080).
-# - airflow-scheduler : Conteneur pour le scheduler Airflow, responsable de l'exécution des DAGs programmés.
-# - airflow-triggerer (si présent) : Composant gérant les événements dans les DAGs, utilisé dans certaines configurations.
-# - airflow-worker (si présent) : Optionnel, pour exécuter les tâches dans une configuration CeleryExecutor.
+# - mssql : Conteneur pour la base de données SQL Server utilisée par Airflow. 
+#   Il stocke les métadonnées d'Airflow et permet le suivi des DAGs, tâches et leurs états. 
+#   La configuration inclut l'acceptation de la licence Microsoft et l'utilisation d'un mot de passe sécurisé.
+# - redis : Conteneur pour Redis, utilisé comme broker par Airflow pour gérer la distribution des tâches
+#   entre le scheduler et les workers dans un environnement CeleryExecutor.
+# - airflow-webserver : Conteneur pour le serveur web Airflow. Il fournit l'interface utilisateur accessible 
+#   via http://localhost:8080, permettant de visualiser et de gérer les DAGs, les tâches, les journaux et l'état des exécutions.
+# - airflow-scheduler : Conteneur pour le scheduler Airflow, responsable de l'orchestration des DAGs 
+#   en fonction de leurs horaires planifiés, dépendances et conditions de réussite/échec.
+# - Volumes : Un volume nommé `mssql-data` est utilisé pour stocker de manière persistante les données SQL Server,
+#   même si le conteneur est redémarré ou recréé.
 
+# Configuration du fichier docker-compose.yaml
 DOCKER_COMPOSE_YAML_CONTENT = """
 version: '3.7'
 services:
-  postgres:
-    image: postgres:13
+  mssql:
+    image: mcr.microsoft.com/mssql/server:2019-latest
     environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    volumes:
-      - ./postgres-data:/var/lib/postgresql/data
+      ACCEPT_EULA: "Y"
+      SA_PASSWORD: "StrongP@ssw0rd"
+    ports:
+      - "1433:1433"
     healthcheck:
-      test: ["CMD", "pg_isready", "-U", "airflow"]
+      test: ["CMD-SHELL", "sqlcmd -S localhost -U SA -P StrongP@ssw0rd -Q 'SELECT 1'"]
       interval: 10s
-      retries: 5
-      start_period: 5s
+      retries: 3
+    volumes:
+      - ./mssql-data:/var/opt/mssql
     restart: always
 
   redis:
@@ -44,6 +52,13 @@ services:
     command: webserver
     ports:
       - "8080:8080"
+    depends_on:
+      redis:
+        condition: service_healthy
+      mssql:
+        condition: service_healthy
+    volumes:
+      - ./config/airflow.cfg:/opt/airflow/airflow.cfg
     healthcheck:
       test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
       interval: 30s
@@ -51,56 +66,46 @@ services:
       retries: 5
       start_period: 30s
     restart: always
-    depends_on:
-      redis:
-        condition: service_healthy
-      postgres:
-        condition: service_healthy
-    volumes:
-      - ./config/airflow.cfg:/opt/airflow/airflow.cfg
 
   airflow-scheduler:
     image: apache/airflow:2.10.4
     command: scheduler
-    healthcheck:
-      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
-      start_period: 30s
-    restart: always
     depends_on:
       redis:
         condition: service_healthy
-      postgres:
+      mssql:
         condition: service_healthy
+    restart: always
 
 volumes:
-  postgres-db-volume:
+  mssql-data:
 """
 
+# Créer le fichier docker-compose.yaml
 def write_docker_compose_yaml(file_path):
     with open(file_path, 'w') as file:
         file.write(DOCKER_COMPOSE_YAML_CONTENT)
     print(f"docker-compose.yaml mis à jour à l'emplacement {file_path}")
 
+# Générer le fichier airflow.cfg
 def create_airflow_cfg(airflow_home):
     config_path = os.path.join(airflow_home, "config/airflow.cfg")
     os.makedirs(os.path.dirname(config_path), exist_ok=True)
     airflow_cfg_content = """
 [core]
 executor = CeleryExecutor
-sql_alchemy_conn = postgresql+psycopg2://airflow:airflow@postgres/airflow
+sql_alchemy_conn = mssql+pyodbc://@localhost/airflow_db?driver=ODBC+Driver+17+for+SQL+Server
 load_examples = True
 
 [celery]
 broker_url = redis://:@redis:6379/0
-result_backend = db+postgresql://airflow:airflow@postgres/airflow
+result_backend = db+mssql+pyodbc://@localhost/airflow_db?driver=ODBC+Driver+17+for+SQL+Server
 """
     with open(config_path, 'w') as file:
         file.write(airflow_cfg_content)
     print(f"airflow.cfg créé à l'emplacement {config_path}")
 
+# Exécuter une commande shell
 def run_command(command, cwd=None):
     try:
         print(f"\nExécution : {' '.join(command)}")
@@ -109,7 +114,7 @@ def run_command(command, cwd=None):
     except subprocess.CalledProcessError as e:
         print(f"Erreur : {e.stderr}")
 
-# Détection et suppression des conteneurs inutiles
+# Suppression des conteneurs inutiles
 def remove_unused_containers():
     print("=== Suppression des conteneurs inutiles ===")
     try:
@@ -117,30 +122,42 @@ def remove_unused_containers():
                                 check=True, text=True, capture_output=True)
         container_ids = result.stdout.strip().split("\n")
         for container_id in container_ids:
-            print(f"Suppression du conteneur : {container_id}")
-            subprocess.run(["docker", "rm", "-f", container_id], check=True)
+            if container_id:  # Éviter les entrées vides
+                print(f"Suppression du conteneur : {container_id}")
+                subprocess.run(["docker", "rm", "-f", container_id], check=True)
     except subprocess.CalledProcessError as e:
         print(f"Erreur lors de la suppression des conteneurs inutiles : {e.stderr}")
 
-# Analyse des logs avec OpenAI
-# (hypothèse : les logs sont collectés dans un fichier ou via une commande)
-def analyze_logs_with_openai(log_file):
+# Connexion à SQL Server
+def test_sql_server_connection():
+    conn_str = (
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+        "SERVER=localhost;"
+        "DATABASE=airflow_db;"
+        "Trusted_Connection=yes;"
+    )
     try:
-        import openai
-        print("=== Analyse des logs avec OpenAI ===")
-        with open(log_file, 'r') as file:
-            logs = file.read()
-        response = openai.Completion.create(
-            engine="text-davinci-003",
-            prompt=f"Analyse ces logs et identifie les erreurs et solutions potentielles :\n{logs}",
-            max_tokens=500
-        )
-        print(response["choices"][0]["text"].strip())
-    except ImportError:
-        print("Le module OpenAI n'est pas installé. Installez-le avec 'pip install openai'.")
-    except Exception as e:
-        print(f"Erreur lors de l'analyse des logs : {e}")
+        conn = pyodbc.connect(conn_str)
+        cursor = conn.cursor()
 
+        # Vérification ou création d'une table
+        cursor.execute("""
+        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'airflow_test')
+        CREATE TABLE airflow_test (
+            id INT PRIMARY KEY IDENTITY(1,1),
+            task_name NVARCHAR(50),
+            executed_at DATETIME
+        )
+        """)
+        conn.commit()
+
+        print("Connexion réussie et table vérifiée.")
+    except Exception as e:
+        print(f"Erreur lors de la connexion : {e}")
+    finally:
+        conn.close()
+
+# Fonction principale
 def diagnose_and_fix():
     airflow_home = os.getcwd()
     docker_compose_path = os.path.join(airflow_home, "docker-compose.yaml")
@@ -156,14 +173,14 @@ def diagnose_and_fix():
     # Suppression des conteneurs inutiles
     remove_unused_containers()
 
-    # Vérification des conteneurs Docker
+    # Démarrer les services Docker
     run_command(["docker-compose", "up", "-d"], cwd=airflow_home)
+
+    # Vérifier les conteneurs en cours d'exécution
     run_command(["docker", "ps"])
 
-    # Vérification des logs et analyse avec OpenAI
-    logs_path = os.path.join(airflow_home, "airflow_logs.txt")
-    run_command(["docker", "logs", "airflow_tutorial-airflow-webserver-1", "&>", logs_path])
-    analyze_logs_with_openai(logs_path)
+    # Tester la connexion à SQL Server
+    test_sql_server_connection()
 
 if __name__ == "__main__":
     diagnose_and_fix()
