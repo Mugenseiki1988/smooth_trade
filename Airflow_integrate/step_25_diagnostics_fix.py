@@ -24,12 +24,14 @@ services:
     environment:
       ACCEPT_EULA: "Y"
       SA_PASSWORD: "Mugenseiki1988#"
+      MSSQL_MEMORY_LIMIT_MB: 2048
+      MSSQL_PID: "Express"
     ports:
       - "1433:1433"
     healthcheck:
-      test: ["CMD-SHELL", "sqlcmd -S localhost -U SA -P Mugenseiki1988# -Q 'SELECT 1'"]
+      test: ["CMD-SHELL", "/opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P Mugenseiki1988# -Q 'SELECT 1'"]
       interval: 10s
-      retries: 3
+      retries: 5
     volumes:
       - ./mssql-data:/var/opt/mssql
     restart: always
@@ -121,7 +123,7 @@ def remove_unused_containers():
                                 check=True, text=True, capture_output=True)
         container_ids = result.stdout.strip().split("\n")
         for container_id in container_ids:
-            if container_id:  # Éviter les entrées vides
+            if container_id:
                 print(f"Suppression du conteneur : {container_id}")
                 subprocess.run(["docker", "rm", "-f", container_id], check=True)
     except subprocess.CalledProcessError as e:
