@@ -1,6 +1,5 @@
 import os
 import subprocess
-from datetime import datetime, timedelta
 import pyodbc
 
 # Description des conteneurs Docker utilisés dans ce projet :
@@ -13,11 +12,10 @@ import pyodbc
 #   via http://localhost:8080, permettant de visualiser et de gérer les DAGs, les tâches, les journaux et l'état des exécutions.
 # - airflow-scheduler : Conteneur pour le scheduler Airflow, responsable de l'orchestration des DAGs 
 #   en fonction de leurs horaires planifiés, dépendances et conditions de réussite/échec.
-# - Volumes : Un volume nommé `mssql-data` est utilisé pour stocker de manière persistante les données SQL Server,
+# - Volumes : Un volume nommé mssql-data est utilisé pour stocker de manière persistante les données SQL Server,
 #   même si le conteneur est redémarré ou recréé.
 
-
-# Configuration du fichier docker-compose.yaml
+# Contenu du fichier docker-compose.yaml
 DOCKER_COMPOSE_YAML_CONTENT = """
 version: '3.7'
 services:
@@ -95,12 +93,12 @@ def create_airflow_cfg(airflow_home):
     airflow_cfg_content = """
 [core]
 executor = CeleryExecutor
-sql_alchemy_conn = mssql+pyodbc://@localhost/airflow_db?driver=ODBC+Driver+17+for+SQL+Server
+sql_alchemy_conn = mssql+pyodbc://airflow_user:AirflowUserPassword#123@localhost/airflow_db?driver=ODBC+Driver+17+for+SQL+Server
 load_examples = True
 
 [celery]
 broker_url = redis://:@redis:6379/0
-result_backend = db+mssql+pyodbc://@localhost/airflow_db?driver=ODBC+Driver+17+for+SQL+Server
+result_backend = db+mssql+pyodbc://airflow_user:AirflowUserPassword#123@localhost/airflow_db?driver=ODBC+Driver+17+for+SQL+Server
 """
     with open(config_path, 'w') as file:
         file.write(airflow_cfg_content)
@@ -129,34 +127,73 @@ def remove_unused_containers():
     except subprocess.CalledProcessError as e:
         print(f"Erreur lors de la suppression des conteneurs inutiles : {e.stderr}")
 
-# Connexion à SQL Server
+# Configurer SQL Server et la base de données
+def configure_sql_server_connection():
+    conn_str = (
+        "DRIVER={ODBC Driver 17 for SQL Server};"
+        "SERVER=localhost;"
+        "DATABASE=master;"
+        "UID=sa;"
+        "PWD=Mugenseiki1988#;"
+    )
+    try:
+        print("Tentative de configuration initiale de SQL Server...")
+        connection = pyodbc.connect(conn_str)
+        print("Connexion au serveur réussie avec succès !")
+
+        cursor = connection.cursor()
+
+        database_name = "airflow_db"
+        user_name = "airflow_user"
+        user_password = "AirflowUserPassword#123"
+
+        # Créer la base de données et l'utilisateur si nécessaire
+        cursor.execute(f"""
+        IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = '{database_name}') CREATE DATABASE {database_name};
+        IF NOT EXISTS (SELECT name FROM sys.sql_logins WHERE name = '{user_name}')
+        BEGIN
+            CREATE LOGIN {user_name} WITH PASSWORD = '{user_password}';
+        END;
+        USE {database_name};
+        IF NOT EXISTS (SELECT name FROM sys.database_principals WHERE name = '{user_name}')
+        BEGIN
+            CREATE USER {user_name} FOR LOGIN {user_name};
+        END;
+        ALTER ROLE db_owner ADD MEMBER {user_name};
+        """)
+
+        print(f"Base de données '{database_name}' et utilisateur '{user_name}' configurés avec succès.")
+
+        connection.commit()
+        connection.close()
+        print("Configuration de la connexion terminée.")
+
+    except pyodbc.Error as e:
+        print(f"Erreur lors de la configuration de SQL Server : {e}")
+
+# Vérifier la connexion à SQL Server
 def test_sql_server_connection():
     conn_str = (
         "DRIVER={ODBC Driver 17 for SQL Server};"
         "SERVER=localhost;"
         "DATABASE=airflow_db;"
-        "Trusted_Connection=yes;"
+        "UID=airflow_user;"
+        "PWD=AirflowUserPassword#123;"
     )
     try:
-        conn = pyodbc.connect(conn_str)
-        cursor = conn.cursor()
+        print("Tentative de connexion au serveur SQL Server...")
+        connection = pyodbc.connect(conn_str)
+        print("Connexion réussie !")
 
-        # Vérification ou création d'une table
-        cursor.execute("""
-        IF NOT EXISTS (SELECT * FROM sys.tables WHERE name = 'airflow_test')
-        CREATE TABLE airflow_test (
-            id INT PRIMARY KEY IDENTITY(1,1),
-            task_name NVARCHAR(50),
-            executed_at DATETIME
-        )
-        """)
-        conn.commit()
+        cursor = connection.cursor()
+        cursor.execute("SELECT @@VERSION;")
 
-        print("Connexion réussie et table vérifiée.")
-    except Exception as e:
+        for row in cursor.fetchall():
+            print(f"Version SQL Server: {row[0]}")
+
+        connection.close()
+    except pyodbc.Error as e:
         print(f"Erreur lors de la connexion : {e}")
-    finally:
-        conn.close()
 
 # Fonction principale
 def diagnose_and_fix():
@@ -181,6 +218,7 @@ def diagnose_and_fix():
     run_command(["docker", "ps"])
 
     # Tester la connexion à SQL Server
+    configure_sql_server_connection()
     test_sql_server_connection()
 
 if __name__ == "__main__":
