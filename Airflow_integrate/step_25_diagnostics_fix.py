@@ -129,7 +129,7 @@ def test_localhost_connection():
 
 
 def diagnose_and_fix():
-    airflow_home = "./airflow_tutorial"
+    airflow_home = "D:/Airflow_tutorial"
     docker_compose_path = os.path.join(airflow_home, "docker-compose.yaml")
 
     if not os.path.exists(airflow_home):
