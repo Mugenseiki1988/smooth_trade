@@ -109,6 +109,22 @@ def check_logs(container_name):
     print(f"=== Vérification des logs du conteneur {container_name} ===")
     run_command(["docker", "logs", container_name])
 
+def verify_airflow_cfg_in_container():
+    print("=== Vérification de la présence du fichier airflow.cfg dans le conteneur airflow-webserver ===")
+    try:
+        result = subprocess.run(
+            ["docker-compose", "exec", "airflow-webserver", "ls", "/opt/airflow/airflow.cfg"],
+            cwd="D:/Airflow_tutorial",
+            check=True,
+            text=True,
+            capture_output=True
+        )
+        print("Fichier airflow.cfg trouvé dans le conteneur :")
+        print(result.stdout)
+    except subprocess.CalledProcessError as e:
+        print("Le fichier airflow.cfg est introuvable dans le conteneur airflow-webserver :")
+        print(e.stderr)
+
 def reset_postgres_data():
     print("=== Réinitialisation des données PostgreSQL ===")
     airflow_home = "D:/Airflow_tutorial"
@@ -165,6 +181,9 @@ def diagnose_and_fix():
     check_logs("airflow_tutorial-airflow-scheduler-1")
     check_logs("airflow_tutorial-postgres-1")
     check_logs("airflow_tutorial-redis-1")
+
+    # Vérification de airflow.cfg dans le conteneur
+    verify_airflow_cfg_in_container()
 
     # Réinitialisation des données PostgreSQL
     reset_postgres_data()
