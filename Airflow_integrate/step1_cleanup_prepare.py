@@ -8,7 +8,7 @@ def uninstall_airflow():
     print("=== Désinstallation d'Apache Airflow ===")
     paths_to_remove = [
         "C:\\Users\\Nicolas JF Martin\\airflow",
-        "D:\\Airflow"
+        "D:\\Airflow_tutorial"
     ]
     for path in paths_to_remove:
         if os.path.exists(path):
