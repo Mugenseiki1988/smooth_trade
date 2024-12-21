@@ -4,7 +4,7 @@ import subprocess
 # === Étape 2 : Installer Apache Airflow ===
 def install_airflow():
     print("=== Installation d'Apache Airflow avec Docker ===")
-    airflow_home = "D:/Airflow"
+    airflow_home = "D:/Airflow_tutorial"
     
     # Vérifier Docker
     try:
