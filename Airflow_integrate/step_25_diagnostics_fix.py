@@ -48,6 +48,8 @@ services:
         condition: service_healthy
       postgres:
         condition: service_healthy
+    volumes:
+      - ${AIRFLOW_PROJ_DIR:-.}/config/airflow.cfg:/opt/airflow/airflow.cfg
 
   airflow-scheduler:
     image: apache/airflow:2.10.4
@@ -74,6 +76,23 @@ def write_docker_compose_yaml(file_path):
         file.write(DOCKER_COMPOSE_YAML_CONTENT)
     print(f"docker-compose.yaml mis à jour à l'emplacement {file_path}")
 
+def create_airflow_cfg(airflow_home):
+    config_path = os.path.join(airflow_home, "config/airflow.cfg")
+    os.makedirs(os.path.dirname(config_path), exist_ok=True)
+    airflow_cfg_content = """
+[core]
+executor = CeleryExecutor
+sql_alchemy_conn = postgresql+psycopg2://airflow:airflow@postgres/airflow
+load_examples = True
+
+[celery]
+broker_url = redis://:@redis:6379/0
+result_backend = db+postgresql://airflow:airflow@postgres/airflow
+"""
+    with open(config_path, 'w') as file:
+        file.write(airflow_cfg_content)
+    print(f"airflow.cfg créé à l'emplacement {config_path}")
+
 def run_command(command, cwd=None):
     try:
         print(f"\nExécution : {' '.join(command)}")
@@ -82,16 +101,13 @@ def run_command(command, cwd=None):
     except subprocess.CalledProcessError as e:
         print(f"Erreur : {e.stderr}")
 
-
 def check_docker_containers():
     print("=== Vérification des conteneurs Docker ===")
     run_command(["docker", "ps"])
 
-
 def check_logs(container_name):
     print(f"=== Vérification des logs du conteneur {container_name} ===")
     run_command(["docker", "logs", container_name])
-
 
 def reset_postgres_data():
     print("=== Réinitialisation des données PostgreSQL ===")
@@ -110,12 +126,10 @@ def reset_postgres_data():
     run_command(["docker-compose", "run", "airflow-webserver", "airflow", "db", "init"], cwd=airflow_home)
     run_command(["docker-compose", "up", "-d"], cwd=airflow_home)
 
-
 def reset_airflow_database():
     print("=== Réinitialisation et mise à jour de la base de données Airflow ===")
-    run_command(["docker-compose", "exec", "airflow-webserver", "airflow", "db", "reset"])
+    run_command(["docker-compose", "exec", "airflow-webserver", "airflow", "db", "reset", "--yes"])
     run_command(["docker-compose", "exec", "airflow-webserver", "airflow", "db", "upgrade"])
-
 
 def test_localhost_connection():
     print("=== Test de connexion à l'interface Web Airflow ===")
@@ -126,7 +140,6 @@ def test_localhost_connection():
     except subprocess.CalledProcessError as e:
         print("La connexion à l'interface Web Airflow a échoué :")
         print(e.stderr)
-
 
 def diagnose_and_fix():
     airflow_home = "D:/Airflow_tutorial"
@@ -140,6 +153,9 @@ def diagnose_and_fix():
 
     # Mettre à jour le fichier docker-compose.yaml
     write_docker_compose_yaml(docker_compose_path)
+
+    # Créer le fichier airflow.cfg
+    create_airflow_cfg(airflow_home)
 
     # Vérification des conteneurs
     check_docker_containers()
@@ -161,4 +177,3 @@ def diagnose_and_fix():
 
 if __name__ == "__main__":
     diagnose_and_fix()
-
