@@ -104,3 +104,4 @@ launch_ssms(
     server="localhost",
     username="sa",
     password="Mugenseiki1988#"
+)
