@@ -1,5 +1,6 @@
 import pyodbc
 import subprocess
+import os
 
 def configure_sql_server_connection():
     conn_str = (
@@ -35,9 +36,12 @@ def configure_sql_server_connection():
         print(f"Utilisateur SQL '{user_name}' vérifié ou créé.")
 
         # Assigner les autorisations nécessaires
-        cursor.execute(f"USE {database_name};")
-        cursor.execute(f"ALTER ROLE db_owner ADD MEMBER {user_name};")
-        print(f"Autorisations configurées pour l'utilisateur '{user_name}'.")
+        try:
+            cursor.execute(f"USE {database_name};")
+            cursor.execute(f"ALTER ROLE db_owner ADD MEMBER {user_name};")
+            print(f"Autorisations configurées pour l'utilisateur '{user_name}'.")
+        except pyodbc.Error as e:
+            print(f"Erreur lors de l'attribution des rôles : {e}")
 
         connection.commit()
         connection.close()
@@ -79,15 +83,22 @@ def test_sql_server_connection(server, database, username, password):
 def launch_ssms(server, username, password):
     try:
         print("Tentative de lancement de SQL Server Management Studio...")
-        ssms_path = r"C:\\Program Files (x86)\\Microsoft SQL Server Management Studio 20\\Common7\\IDE\\Ssms.exe"
+        # Chemin vers SSMS
+        ssms_path = r"C:\Program Files (x86)\Microsoft SQL Server Management Studio 20\Common7\IDE\Ssms.exe"
 
-        command = f'{ssms_path} -S {server} -U {username} -P {password}'
+        # Vérifier si le chemin SSMS existe
+        if not os.path.exists(ssms_path):
+            raise FileNotFoundError("SSMS n'est pas installé ou le chemin est incorrect.")
 
+        # Construire la commande pour SSMS
+        command = f'"{ssms_path}" -S {server} -U {username} -P {password}'
+
+        # Lancer SSMS
         subprocess.Popen(command, shell=True)
         print("SQL Server Management Studio lancé avec succès.")
 
-    except FileNotFoundError:
-        print("Erreur : SSMS n'est pas installé ou le chemin est incorrect.")
+    except FileNotFoundError as e:
+        print(f"Erreur : {e}")
     except Exception as e:
         print(f"Erreur lors du lancement de SSMS : {e}")
 
