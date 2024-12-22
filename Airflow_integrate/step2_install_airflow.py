@@ -1,11 +1,11 @@
 import os
 import subprocess
 
-# === Étape 2 : Installer Apache Airflow ===
-def install_airflow():
-    print("=== Installation d'Apache Airflow avec Docker ===")
-    airflow_home = "D:/Airflow_tutorial"
-    
+# === Étape 2 : Installer Apache Airflow avec Docker ===
+def install_airflow_with_docker():
+    print("=== Installation d'Apache Airflow avec PostgreSQL, Prometheus et Grafana ===")
+    airflow_home = "D:/smooth_trade"
+
     # Vérifier Docker
     try:
         subprocess.run(["docker", "--version"], check=True, stdout=subprocess.DEVNULL)
@@ -14,45 +14,119 @@ def install_airflow():
         print("Docker n'est pas installé. Veuillez installer Docker avant de continuer.")
         return
 
-    # Créer le répertoire Airflow
-    if not os.path.exists(airflow_home):
-        os.makedirs(airflow_home)
-        print(f"Répertoire créé : {airflow_home}")
-    else:
-        print(f"Répertoire déjà existant : {airflow_home}")
-    
-    # Télécharger docker-compose.yaml
-    compose_file_url = "https://airflow.apache.org/docs/apache-airflow/stable/docker-compose.yaml"
-    compose_file_path = os.path.join(airflow_home, "docker-compose.yaml")
-    if not os.path.exists(compose_file_path):
-        print("Téléchargement du fichier docker-compose.yaml...")
-        subprocess.run(["curl", "-LfO", compose_file_url], cwd=airflow_home, check=True)
-    else:
-        print("Le fichier docker-compose.yaml existe déjà.")
-    
-    # Configurer les répertoires et le fichier .env
-    dags_path = os.path.join(airflow_home, "dags")
-    logs_path = os.path.join(airflow_home, "logs")
-    plugins_path = os.path.join(airflow_home, "plugins")
-    
-    for path in [dags_path, logs_path, plugins_path]:
-        if not os.path.exists(path):
-            os.makedirs(path)
-            print(f"Répertoire créé : {path}")
-    
-    env_path = os.path.join(airflow_home, ".env")
-    with open(env_path, "w") as env_file:
-        env_file.write("AIRFLOW_UID=50000\n")
-    print(f"Fichier .env configuré dans : {env_path}")
-    
-    # Initialiser et démarrer Docker Compose
-    print("Initialisation de Docker Compose pour Airflow...")
+    # Créer les répertoires nécessaires
+    directories = [
+        "dags", "scripts", "config", "data/logs", "data/trades",
+        "exports", "prometheus", "grafana", "postgres_data"
+    ]
+    for directory in directories:
+        path = os.path.join(airflow_home, directory)
+        os.makedirs(path, exist_ok=True)
+
+    # Créer le fichier Docker Compose
+    docker_compose_content = """
+version: '3.7'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
+    restart: always
+
+  grafana:
+    image: grafana/grafana:latest
+    volumes:
+      - ./grafana:/etc/grafana/provisioning/datasources
+    ports:
+      - "3000:3000"
+    restart: always
+
+  redis:
+    image: redis:7.2-bookworm
+    ports:
+      - "6379:6379"
+    restart: always
+
+  airflow-webserver:
+    image: apache/airflow:2.10.4
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.4
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  postgres_data:
+  prometheus:
+  grafana:
+  dags:
+  logs:
+  plugins:
+"""
+
+    docker_compose_path = os.path.join(airflow_home, "docker-compose.yml")
+    with open(docker_compose_path, "w") as file:
+        file.write(docker_compose_content)
+    print(f"Fichier docker-compose.yml créé à l'emplacement {docker_compose_path}")
+
+    # Initialiser les services avec Docker Compose
+    print("Initialisation de Docker Compose pour Airflow, PostgreSQL, Prometheus et Grafana...")
     subprocess.run(["docker-compose", "up", "airflow-init"], cwd=airflow_home, check=True)
     subprocess.run(["docker-compose", "up", "-d"], cwd=airflow_home, check=True)
-    
-    print("=== Installation d'Apache Airflow terminée ===")
-    print("Accédez à l'interface Web Airflow sur http://localhost:8080")
+
+    print("=== Installation terminée ===")
+    print("Accédez à Airflow sur http://localhost:8080")
+    print("Accédez à Prometheus sur http://localhost:9090")
+    print("Accédez à Grafana sur http://localhost:3000")
 
 # Exécution
 if __name__ == "__main__":
-    install_airflow()
+    install_airflow_with_docker()
