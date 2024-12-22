@@ -1,35 +1,86 @@
-version: '3.8'
+
+version: '3.7'
+
 services:
-  airflow:
-    build:
-      context: .
-      dockerfile: Dockerfile.paper-trading.custom
-    container_name: airflow
-    ports:
-      - "8080:8080"
+  postgres:
+    image: postgres:15
     environment:
-      - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW__CORE__DAGS_FOLDER=/app/dags
-      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: airflow
+      POSTGRES_DB: airflow
+    ports:
+      - "5432:5432"
     volumes:
-      - ./dags:/app/dags
-      - ./config:/app/config
-      - ./data:/app/data
+      - ./postgres_data:/var/lib/postgresql/data
+    restart: always
 
   prometheus:
-    image: prom/prometheus
-    container_name: prometheus
+    image: prom/prometheus:latest
     volumes:
-      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus:/etc/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
     ports:
       - "9090:9090"
+    restart: always
 
   grafana:
-    image: grafana/grafana
-    container_name: grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
+    image: grafana/grafana:latest
     volumes:
-      - ./config/grafana_dashboard.json:/var/lib/grafana/provisioning/dashboards/grafana_dashboard.json
+      - ./grafana:/etc/grafana/provisioning/datasources
     ports:
       - "3000:3000"
+    restart: always
+
+  redis:
+    image: redis:7.2-bookworm
+    ports:
+      - "6379:6379"
+    restart: always
+
+  airflow-webserver:
+    image: apache/airflow:2.10.4
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: always
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.4
+    command: scheduler
+    environment:
+      AIRFLOW__CORE__EXECUTOR: CeleryExecutor
+      AIRFLOW__CORE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres/airflow
+      AIRFLOW__CELERY__BROKER_URL: redis://redis:6379/0
+      AIRFLOW__CELERY__RESULT_BACKEND: db+postgresql://airflow:airflow@postgres/airflow
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./plugins:/opt/airflow/plugins
+    depends_on:
+      redis:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+    restart: always
+
+volumes:
+  postgres_data:
+  prometheus:
+  grafana:
+  dags:
+  logs:
+  plugins:
