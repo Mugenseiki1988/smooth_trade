@@ -3,43 +3,50 @@ import shutil
 import subprocess
 import sys
 
-# === Étape 1 : Désinstallation d'Apache Airflow et nettoyage ===
+# === Étape 1 : Désinstallation et nettoyage ===
 def uninstall_airflow():
-    print("=== Désinstallation d'Apache Airflow et nettoyage ===")
-    paths_to_remove = [
-        "C:\\Users\\Nicolas JF Martin\\airflow",
-        "D:\\Airflow_tutorial",
-        "D:\\smooth_trade\\prometheus",
-        "D:\\smooth_trade\\grafana",
-        "D:\\smooth_trade\\postgres_data"
-    ]
-    for path in paths_to_remove:
-        if os.path.exists(path):
-            print(f"Suppression du dossier : {path}")
-            shutil.rmtree(path, ignore_errors=True)
-        else:
-            print(f"Dossier introuvable : {path}")
+    print("=== Désinstallation d'Apache Airflow, nettoyage des répertoires et des conteneurs Docker ===")
     
-    # Désinstaller les paquets Python liés à Airflow (si nécessaire)
+    # Répertoires à conserver
+    excluded_directories = ["Airflow_integrate", "AUTRE"]
+
+    # Supprimer tous les sous-dossiers sauf exclusions
+    base_directory = "D:\\smooth_trade"
+    for item in os.listdir(base_directory):
+        item_path = os.path.join(base_directory, item)
+        if os.path.isdir(item_path) and item not in excluded_directories:
+            print(f"Suppression du dossier : {item_path}")
+            shutil.rmtree(item_path, ignore_errors=True)
+        elif os.path.isfile(item_path):
+            print(f"Suppression du fichier : {item_path}")
+            os.remove(item_path)
+        else:
+            print(f"Conservé : {item_path}")
+
+    # Supprimer les conteneurs, volumes et réseaux Docker
+    print("Suppression des conteneurs, volumes et réseaux Docker...")
+    subprocess.run(["docker-compose", "down", "--volumes", "--remove-orphans"], cwd=base_directory, check=False)
+    subprocess.run(["docker", "system", "prune", "-f", "--volumes"], check=False)
+
+    # Supprimer les images Docker associées
+    print("Suppression des images Docker associées...")
+    images = ["apache/airflow", "postgres", "prom/prometheus", "grafana/grafana", "redis"]
+    for image in images:
+        subprocess.run(["docker", "rmi", "-f", image], check=False)
+
+    # Désinstaller Airflow de Python si nécessaire
     print("Suppression des paquets Python liés à Apache Airflow...")
     subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "apache-airflow"], check=False)
 
-    print("=== Désinstallation terminée ===")
+    print("=== Nettoyage complet terminé ===")
 
-# === Étape 2 : Préparer la structure des répertoires ===
+# === Étape 2 : Préparer les répertoires ===
 def prepare_directories():
     print("=== Préparation des répertoires pour le projet ===")
     base_directory = "D:/smooth_trade"
     folders_to_create = [
-        "dags",
-        "scripts",
-        "config",
-        "data/logs",
-        "data/trades",
-        "exports",
-        "prometheus",
-        "grafana",
-        "postgres_data"
+        "dags", "scripts", "config", "data/logs", "data/trades",
+        "exports", "prometheus", "grafana/datasources", "grafana/dashboards", "postgres_data"
     ]
     for folder in folders_to_create:
         path = os.path.join(base_directory, folder)
@@ -47,47 +54,24 @@ def prepare_directories():
         print(f"Créé : {path}")
     print("=== Répertoires préparés avec succès ===")
 
-# === Étape 3 : Configuration initiale des services ===
-def initialize_prometheus_grafana():
-    print("=== Initialisation des fichiers de configuration pour Prometheus et Grafana ===")
-    
-    prometheus_config = """
-global:
-  scrape_interval: 15s
+# === Étape 3 : Nettoyage et préparation des ports ===
+def clean_ports():
+    print("=== Nettoyage des ports en cours ===")
+    ports = [8080, 5432, 6379, 9090, 3000]
+    for port in ports:
+        try:
+            # Tuer les processus sur les ports (Windows spécifique)
+            result = subprocess.run(["netstat", "-ano"], capture_output=True, text=True)
+            for line in result.stdout.splitlines():
+                if f":{port} " in line:
+                    pid = line.split()[-1]
+                    subprocess.run(["taskkill", "/PID", pid, "/F"], check=False)
+                    print(f"Processus sur le port {port} arrêté (PID {pid}).")
+        except Exception as e:
+            print(f"Erreur lors du nettoyage du port {port} : {e}")
+    print("=== Ports nettoyés ===")
 
-scrape_configs:
-  - job_name: 'docker'
-    static_configs:
-      - targets: ['host.docker.internal:9323'] # Prometheus Docker endpoint
-    metrics_path: /metrics
-"""
-    grafana_provisioning = """
-apiVersion: 1
-providers:
-  - name: "Prometheus"
-    orgId: 1
-    folder: ""
-    type: "prometheus"
-    url: "http://prometheus:9090"
-    access: "proxy"
-    isDefault: true
-"""
-    base_directory = "D:/smooth_trade"
-    prometheus_config_path = os.path.join(base_directory, "prometheus", "prometheus.yml")
-    grafana_config_path = os.path.join(base_directory, "grafana", "datasource.yml")
-
-    # Créer le fichier prometheus.yml
-    with open(prometheus_config_path, "w") as prometheus_file:
-        prometheus_file.write(prometheus_config)
-    print(f"Fichier Prometheus créé : {prometheus_config_path}")
-
-    # Créer le fichier datasource.yml pour Grafana
-    with open(grafana_config_path, "w") as grafana_file:
-        grafana_file.write(grafana_provisioning)
-    print(f"Fichier Grafana provisioning créé : {grafana_config_path}")
-
-# Exécution des étapes
 if __name__ == "__main__":
     uninstall_airflow()
     prepare_directories()
-    initialize_prometheus_grafana()
+    clean_ports()

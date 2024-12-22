@@ -1,0 +1,9 @@
+apache-airflow==2.6.3
+pandas
+prometheus-client
+requests
+flask
+pyyaml
+jsonschema
+matplotlib
+sqlalchemy
